@@ -139,11 +139,12 @@ The protected account is immutable through the app by design. To rotate its pass
 2. Run the dedicated re-seed script:
 
 ```bash
-# create-if-missing (same as bootstrap seeding)
-npm run seed:superadmin
+# local development — after editing apps/api/.env
+npm run seed:superadmin                                        # create-if-missing
+npm --prefix apps/api run seed:superadmin -- --force-reset     # rotate credentials
 
-# force re-hash the password from .env — the ONLY sanctioned rotation path
-npm --prefix apps/api run seed:superadmin -- --force-reset
+# Docker/VPS deploy — after editing SUPERADMIN_* in the root .env
+./deploy.sh --reset-superadmin
 ```
 
 ## API overview

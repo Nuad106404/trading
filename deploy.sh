@@ -99,6 +99,18 @@ EOF
   echo
 fi
 
+# ./deploy.sh --reset-superadmin
+# After editing SUPERADMIN_PASSWORD (or _EMAIL) in .env: applies the new env
+# to the api container and force re-hashes the protected superadmin's
+# credentials — the ONLY sanctioned way to rotate them.
+if [ "${1:-}" = "--reset-superadmin" ]; then
+  echo "── Re-seeding superadmin credentials from .env ────────────"
+  docker compose up -d
+  docker compose exec api node dist/seed/reseed --force-reset
+  echo "✓ Superadmin credentials now match SUPERADMIN_* in .env"
+  exit 0
+fi
+
 echo "── Building & starting containers ─────────────────────────"
 docker compose up -d --build
 
