@@ -1,0 +1,51 @@
+# One-command production stack: MongoDB + NestJS API + Next.js web (PWA).
+# Values come from the root .env — run ./deploy.sh to generate it, or copy
+# .env.example and fill it in yourself, then: docker compose up -d --build
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # intentionally NOT exposed to the host — only the api container reaches it
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      MONGODB_URI: mongodb://mongo:27017/user_management
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?run ./deploy.sh or fill .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?run ./deploy.sh or fill .env}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      WEB_ORIGIN: ${WEB_ORIGIN:?public URL of the web app}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:?}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:?}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-superadmin@local.host}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@local.host}
+      TRADING_LOSS_ALERT_THRESHOLD: ${TRADING_LOSS_ALERT_THRESHOLD:-100}
+    depends_on:
+      - mongo
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        # NEXT_PUBLIC_* are inlined into the client bundle at build time —
+        # must be the URL browsers use to reach the API, not a docker-internal one
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?public URL of the API}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  mongo-data:

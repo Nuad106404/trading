@@ -30,7 +30,34 @@ user-management/
 └─ README.md
 ```
 
-## Requirements
+## Deploy to a VPS (one command)
+
+On any Linux VPS with Docker installed:
+
+```bash
+git clone https://github.com/Nuad106404/trading.git
+cd trading
+./deploy.sh
+```
+
+That's it. On the first run the script generates `.env` (random JWT secrets, VAPID
+push keys via a one-off node container, and a superadmin password that it prints —
+save it), then builds and starts three containers with Docker Compose: **MongoDB**
+(persistent volume, not exposed to the host), the **API** on `:4000`, and the **web
+app** on `:3000` (Next.js standalone build). The protected superadmin is seeded on
+first boot as usual.
+
+- Custom domain/URLs: `API_URL=https://api.example.com WEB_URL=https://example.com ./deploy.sh`
+  (first run), or edit `.env` and re-run. `NEXT_PUBLIC_API_URL` must be the URL
+  **browsers** use to reach the API — it's baked into the web bundle at build time,
+  so changing it requires a rebuild (`./deploy.sh` does that).
+- **Update to the latest code:** `git pull && ./deploy.sh` — rebuilds only what changed.
+- Logs: `docker compose logs -f` · stop: `docker compose down` (data survives in the
+  `mongo-data` volume).
+- For HTTPS put a reverse proxy (Caddy/nginx + certbot) in front of ports 3000/4000 —
+  note that PWA install and web push require HTTPS on anything other than `localhost`.
+
+## Requirements (local development)
 
 - Node.js ≥ 20
 - MongoDB running locally (or a connection string), e.g. `mongod` or Docker:
