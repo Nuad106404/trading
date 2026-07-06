@@ -13,7 +13,8 @@ services:
     build: ./apps/api
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      # setup-ssl.sh sets BIND_IP=127.0.0.1 so traffic only enters via nginx
+      - "${BIND_IP:-0.0.0.0}:4000:4000"
     environment:
       PORT: 4000
       MONGODB_URI: mongodb://mongo:27017/user_management
@@ -43,7 +44,7 @@ services:
         NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${BIND_IP:-0.0.0.0}:3000:3000"
     depends_on:
       - api
 

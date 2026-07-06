@@ -54,8 +54,21 @@ first boot as usual.
 - **Update to the latest code:** `git pull && ./deploy.sh` — rebuilds only what changed.
 - Logs: `docker compose logs -f` · stop: `docker compose down` (data survives in the
   `mongo-data` volume).
-- For HTTPS put a reverse proxy (Caddy/nginx + certbot) in front of ports 3000/4000 —
-  note that PWA install and web push require HTTPS on anything other than `localhost`.
+
+### HTTPS with certbot (Let's Encrypt)
+
+PWA install and web push require HTTPS. After `./deploy.sh` works, point two DNS A
+records (e.g. `trading.example.com` and `api.trading.example.com`) at the server, then:
+
+```bash
+./setup-ssl.sh trading.example.com api.trading.example.com you@example.com
+```
+
+The script installs nginx + certbot, sets up the reverse proxy (web → :3000,
+api → :4000), obtains and auto-renews certificates (`certbot.timer`), rewrites `.env`
+to the `https://` URLs, binds the app ports to `127.0.0.1` (public traffic flows only
+through nginx), and rebuilds the web container so the new API URL is baked in.
+Debian/Ubuntu only; on other distros replicate the nginx blocks it writes.
 
 ## Requirements (local development)
 
