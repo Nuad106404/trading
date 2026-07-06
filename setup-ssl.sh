@@ -33,6 +33,13 @@ if [ -z "$WEB_DOMAIN" ]; then
 fi
 API_DOMAIN="${API_DOMAIN:-api.$WEB_DOMAIN}"
 
+# apex domain with a www record in DNS → cover www in the cert too
+WWW_DOMAIN=""
+if [ "${WEB_DOMAIN#www.}" = "$WEB_DOMAIN" ] && getent hosts "www.$WEB_DOMAIN" >/dev/null 2>&1; then
+  WWW_DOMAIN="www.$WEB_DOMAIN"
+  echo "• www.$WEB_DOMAIN found in DNS — it will be included in the certificate."
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "✗ Run as root (or with sudo)."; exit 1
 fi
@@ -63,7 +70,7 @@ echo "── Writing nginx reverse-proxy config ──────────�
 cat > /etc/nginx/sites-available/trading.conf <<EOF
 server {
     listen 80;
-    server_name $WEB_DOMAIN;
+    server_name $WEB_DOMAIN${WWW_DOMAIN:+ $WWW_DOMAIN};
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -100,8 +107,10 @@ systemctl reload nginx
 echo "── Obtaining certificates (Let's Encrypt) ─────────────────"
 CERTBOT_EMAIL_ARGS=(--register-unsafely-without-email)
 if [ -n "$EMAIL" ]; then CERTBOT_EMAIL_ARGS=(-m "$EMAIL"); fi
+CERTBOT_DOMAINS=(-d "$WEB_DOMAIN" -d "$API_DOMAIN")
+if [ -n "$WWW_DOMAIN" ]; then CERTBOT_DOMAINS+=(-d "$WWW_DOMAIN"); fi
 certbot --nginx --redirect --agree-tos -n "${CERTBOT_EMAIL_ARGS[@]}" \
-  -d "$WEB_DOMAIN" -d "$API_DOMAIN"
+  "${CERTBOT_DOMAINS[@]}"
 
 echo "── Switching the app to the https URLs ────────────────────"
 set_env() {
