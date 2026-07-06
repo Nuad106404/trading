@@ -16,11 +16,30 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "✗ Docker is required. Install it first: https://docs.docker.com/engine/install/"
-  exit 1
+  echo "── Docker not found — installing via get.docker.com ──────"
+  SUDO=""
+  if [ "$(id -u)" -ne 0 ]; then
+    if command -v sudo >/dev/null 2>&1; then SUDO="sudo"; else
+      echo "✗ Root or sudo is required to install Docker."; exit 1
+    fi
+  fi
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://get.docker.com | $SUDO sh
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://get.docker.com | $SUDO sh
+  else
+    echo "✗ curl or wget is required to download the Docker installer."; exit 1
+  fi
+  $SUDO systemctl enable --now docker 2>/dev/null || true
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "✗ Docker installation failed — install manually: https://docs.docker.com/engine/install/"
+    exit 1
+  fi
+  echo "✓ Docker installed."
 fi
 if ! docker compose version >/dev/null 2>&1; then
-  echo "✗ Docker Compose v2 is required (the 'docker compose' command)."
+  echo "✗ Docker Compose v2 plugin is missing. On Debian/Ubuntu:"
+  echo "    apt-get install docker-compose-plugin"
   exit 1
 fi
 
