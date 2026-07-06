@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 216 20% 5%; /* #0b0d10 */
+  --foreground: 210 20% 96%;
+  --card: 217 19% 8%;
+  --card-foreground: 210 20% 96%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 210 20% 98%;
+  --secondary: 217 15% 16%;
+  --secondary-foreground: 210 20% 92%;
+  --muted: 217 15% 14%;
+  --muted-foreground: 215 12% 62%;
+  --destructive: 0 72% 55%;
+  --destructive-foreground: 210 20% 98%;
+  --success: 152 60% 42%;
+  --success-foreground: 210 20% 98%;
+  --border: 217 15% 16%;
+  --input: 217 15% 18%;
+  --ring: 217 91% 60%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top);
+}

@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# env — real secrets live here, never commit
+.env
+.env.local
+.env.*.local
+
+# builds
+dist/
+.next/
+out/
+
+# serwist generated service worker
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/swe-worker*.js
+
+# misc
+*.log
+.DS_Store
+.turbo/
+
+# local archives — too big for GitHub, never source code
+*.zip
+*.rar
+*.7z
