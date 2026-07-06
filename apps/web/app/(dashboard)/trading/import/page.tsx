@@ -22,6 +22,7 @@ import { downloadCsvTemplate, parseMt5Csv, type ParsedCsv } from "@/lib/mt5-csv"
 import { parseMt5Journal } from "@/lib/mt5-journal";
 import { parseMt5ReportXlsx } from "@/lib/mt5-report";
 import { fmtSignedMoney, pnlClass } from "@/lib/trading";
+import { invalidateTradingScopes } from "@/lib/use-trading-events";
 import { cn } from "@/lib/utils";
 
 export default function ImportPage() {
@@ -96,7 +97,7 @@ export default function ImportPage() {
         `Imported ${result.importedTrades} trades and ${result.importedTransactions} cash transactions.` +
           (skipped > 0 ? ` ${skipped} duplicate entr${skipped === 1 ? "y" : "ies"} skipped.` : ""),
       );
-      void queryClient.invalidateQueries({ queryKey: ["trading"] });
+      invalidateTradingScopes(queryClient, ["trades", "cash", "stats"]);
       router.push("/trading");
     },
     onError: (err) =>

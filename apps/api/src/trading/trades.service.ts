@@ -11,6 +11,7 @@ import {
   TradeDocument,
   TradingSource,
 } from './schemas/trade.schema';
+import { TradingEventsService } from './trading-events.service';
 import { computeGrossProfit } from './trading.util';
 
 function escapeRegex(value: string): string {
@@ -26,6 +27,7 @@ export class TradesService {
     @InjectModel(CashTransaction.name)
     private readonly cashModel: Model<CashTransactionDocument>,
     private readonly pushService: PushService,
+    private readonly events: TradingEventsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -86,6 +88,7 @@ export class TradesService {
       source: TradingSource.MANUAL,
     });
     this.maybeAlertLargeLoss(userId, trade);
+    this.events.emit(userId, ['trades', 'stats']);
     return trade;
   }
 
@@ -98,12 +101,14 @@ export class TradesService {
     );
     Object.assign(trade, this.toTradeData({ ...trade.toObject(), ...patch } as CreateTradeDto));
     await trade.save();
+    this.events.emit(userId, ['trades', 'stats']);
     return trade;
   }
 
   async remove(userId: string, id: string): Promise<{ deleted: true }> {
     const trade = await this.findOne(userId, id);
     await this.tradeModel.deleteOne({ _id: trade._id }).exec();
+    this.events.emit(userId, ['trades', 'stats']);
     return { deleted: true };
   }
 
@@ -115,7 +120,9 @@ export class TradesService {
         userId: new Types.ObjectId(userId),
       })
       .exec();
-    return { deleted: result.deletedCount ?? 0 };
+    const deleted = result.deletedCount ?? 0;
+    if (deleted > 0) this.events.emit(userId, ['trades', 'stats']);
+    return { deleted };
   }
 
   /**
@@ -177,6 +184,10 @@ export class TradesService {
 
     const trades = newTrades.length > 0 ? await this.tradeModel.insertMany(newTrades) : [];
     const transactions = newCash.length > 0 ? await this.cashModel.insertMany(newCash) : [];
+
+    if (trades.length > 0 || transactions.length > 0) {
+      this.events.emit(userId, ['trades', 'cash', 'stats']);
+    }
 
     return {
       importedTrades: trades.length,

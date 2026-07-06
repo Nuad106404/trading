@@ -12,6 +12,11 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   app.use(helmet());
+  // SSE through nginx: disable response buffering so events flush immediately
+  app.use('/trading/events', (_req: any, res: any, next: () => void) => {
+    res.setHeader('X-Accel-Buffering', 'no');
+    next();
+  });
   app.enableCors({
     origin: process.env.WEB_ORIGIN ?? 'http://localhost:3000',
     credentials: true,

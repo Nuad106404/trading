@@ -30,6 +30,7 @@ import {
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { fmtMoney } from "@/lib/trading";
+import { invalidateTradingScopes } from "@/lib/use-trading-events";
 import type { CashInput, CashTransaction, CashType } from "@/lib/trading-types";
 import { formatDate } from "@/lib/utils";
 
@@ -49,7 +50,8 @@ export default function CashPage() {
     queryFn: () => api<CashTransaction[]>("/trading/cash"),
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["trading"] });
+  // only cash + stats components refresh — the trades table is untouched
+  const invalidate = () => invalidateTradingScopes(queryClient, ["cash", "stats"]);
 
   const createMutation = useMutation({
     mutationFn: (input: CashInput) => api("/trading/cash", { method: "POST", body: input }),

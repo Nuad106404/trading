@@ -39,6 +39,7 @@ import {
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { fmtSignedMoney, pnlClass } from "@/lib/trading";
+import { invalidateTradingScopes } from "@/lib/use-trading-events";
 import type { Trade, TradeInput } from "@/lib/trading-types";
 import type { Paginated } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
@@ -100,7 +101,8 @@ export default function TradesPage() {
   // selection doesn't survive filter/page changes — avoids deleting unseen rows
   useEffect(() => setSelected(new Set()), [queryString]);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["trading"] });
+  // only trade-related components refresh — cash & unrelated views are untouched
+  const invalidate = () => invalidateTradingScopes(queryClient, ["trades", "stats"]);
 
   const createMutation = useMutation({
     mutationFn: (input: TradeInput) => api<Trade>("/trading/trades", { method: "POST", body: input }),

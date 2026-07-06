@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import type { CashInput, CashType } from "@/lib/trading-types";
+import { invalidateTradingScopes } from "@/lib/use-trading-events";
 
 /** One-tap deposit / withdrawal entry, used from the trading dashboard. */
 export function CashQuickDialog({
@@ -40,7 +41,7 @@ export function CashQuickDialog({
       setAmount("");
       setNote("");
       onOpenChange(false);
-      void queryClient.invalidateQueries({ queryKey: ["trading"] });
+      invalidateTradingScopes(queryClient, ["cash", "stats"]);
     },
     onError: (err) => {
       if (typeof navigator !== "undefined" && !navigator.onLine) {

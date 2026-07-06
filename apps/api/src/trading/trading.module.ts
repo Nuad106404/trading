@@ -15,6 +15,8 @@ import { TradesController } from './trades.controller';
 import { TradesService } from './trades.service';
 import { TradingAdminController } from './trading-admin.controller';
 import { TradingAdminService } from './trading-admin.service';
+import { TradingEventsController } from './trading-events.controller';
+import { TradingEventsService } from './trading-events.service';
 import { TradingNotificationsService } from './trading-notifications.service';
 
 @Module({
@@ -26,12 +28,19 @@ import { TradingNotificationsService } from './trading-notifications.service';
     ]),
     PushModule,
   ],
-  controllers: [TradesController, CashController, StatsController, TradingAdminController],
+  controllers: [
+    TradesController,
+    CashController,
+    StatsController,
+    TradingAdminController,
+    TradingEventsController,
+  ],
   providers: [
     TradesService,
     CashService,
     StatsService,
     TradingAdminService,
+    TradingEventsService,
     TradingNotificationsService,
   ],
 })

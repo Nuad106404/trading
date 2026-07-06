@@ -7,12 +7,14 @@ import {
   CashTransactionDocument,
 } from './schemas/cash-transaction.schema';
 import { TradingSource } from './schemas/trade.schema';
+import { TradingEventsService } from './trading-events.service';
 
 @Injectable()
 export class CashService {
   constructor(
     @InjectModel(CashTransaction.name)
     private readonly cashModel: Model<CashTransactionDocument>,
+    private readonly events: TradingEventsService,
   ) {}
 
   async findAll(userId: string, query: QueryCashDto) {
@@ -29,7 +31,7 @@ export class CashService {
   }
 
   async create(userId: string, dto: CreateCashDto): Promise<CashTransactionDocument> {
-    return this.cashModel.create({
+    const tx = await this.cashModel.create({
       type: dto.type,
       amount: dto.amount,
       date: new Date(dto.date),
@@ -37,6 +39,8 @@ export class CashService {
       userId: new Types.ObjectId(userId),
       source: TradingSource.MANUAL,
     });
+    this.events.emit(userId, ['cash', 'stats']);
+    return tx;
   }
 
   async update(userId: string, id: string, dto: UpdateCashDto): Promise<CashTransactionDocument> {
@@ -46,12 +50,14 @@ export class CashService {
     if (dto.date !== undefined) tx.date = new Date(dto.date);
     if (dto.note !== undefined) tx.note = dto.note;
     await tx.save();
+    this.events.emit(userId, ['cash', 'stats']);
     return tx;
   }
 
   async remove(userId: string, id: string): Promise<{ deleted: true }> {
     const tx = await this.findOne(userId, id);
     await this.cashModel.deleteOne({ _id: tx._id }).exec();
+    this.events.emit(userId, ['cash', 'stats']);
     return { deleted: true };
   }
 
@@ -63,7 +69,9 @@ export class CashService {
         userId: new Types.ObjectId(userId),
       })
       .exec();
-    return { deleted: result.deletedCount ?? 0 };
+    const deleted = result.deletedCount ?? 0;
+    if (deleted > 0) this.events.emit(userId, ['cash', 'stats']);
+    return { deleted };
   }
 
   private async findOne(userId: string, id: string): Promise<CashTransactionDocument> {

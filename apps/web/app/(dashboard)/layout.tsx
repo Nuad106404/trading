@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { registerPeriodicSync } from "@/lib/use-push";
+import { useTradingEvents } from "@/lib/use-trading-events";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -29,6 +30,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
+
+  // live per-component updates whenever this user's journal changes anywhere
+  useTradingEvents(!!user);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
