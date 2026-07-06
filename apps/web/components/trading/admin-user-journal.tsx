@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowUpFromLine, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { BulkBar, RowCheckbox } from "@/components/bulk-bar";
 import { TradeForm } from "@/components/trading/trade-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ export function AdminUserJournal({ userId, username }: { userId: string; usernam
   const [editing, setEditing] = useState<Trade | null>(null);
   const [deleting, setDeleting] = useState<Trade | null>(null);
   const [deletingCash, setDeletingCash] = useState<CashTransaction | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const base = `/trading/admin/users/${userId}`;
 
@@ -79,6 +82,26 @@ export function AdminUserJournal({ userId, username }: { userId: string; usernam
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete trade."),
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      api<{ deleted: number }>(`${base}/trades/bulk-delete`, { method: "POST", body: { ids } }),
+    onSuccess: (result) => {
+      toast.success(`${result.deleted} trade${result.deleted === 1 ? "" : "s"} deleted from ${username}'s journal.`);
+      setSelected(new Set());
+      setBulkConfirm(false);
+      void invalidate();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete trades."),
+  });
+
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const deleteCashMutation = useMutation({
     mutationFn: (id: string) => api(`${base}/cash/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -103,6 +126,12 @@ export function AdminUserJournal({ userId, username }: { userId: string; usernam
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 pt-0">
+          <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
+            <Button variant="destructive" size="sm" onClick={() => setBulkConfirm(true)}>
+              <Trash2 className="h-4 w-4" />
+              Delete selected
+            </Button>
+          </BulkBar>
           {tradesQuery.isPending ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading trades…</p>
           ) : tradesQuery.isError ? (
@@ -115,6 +144,22 @@ export function AdminUserJournal({ userId, username }: { userId: string; usernam
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <RowCheckbox
+                      checked={
+                        (data?.data.length ?? 0) > 0 &&
+                        (data?.data ?? []).every((trade) => selected.has(trade.id))
+                      }
+                      onChange={() =>
+                        setSelected(
+                          (data?.data ?? []).every((trade) => selected.has(trade.id))
+                            ? new Set()
+                            : new Set((data?.data ?? []).map((trade) => trade.id)),
+                        )
+                      }
+                      label="Select all"
+                    />
+                  </TableHead>
                   <TableHead>Symbol</TableHead>
                   <TableHead>Side</TableHead>
                   <TableHead>Lots</TableHead>
@@ -127,6 +172,9 @@ export function AdminUserJournal({ userId, username }: { userId: string; usernam
               <TableBody>
                 {data?.data.map((trade) => (
                   <TableRow key={trade.id}>
+                    <TableCell>
+                      <RowCheckbox checked={selected.has(trade.id)} onChange={() => toggleRow(trade.id)} />
+                    </TableCell>
                     <TableCell className="font-mono font-semibold text-amber-400">
                       {trade.symbol}
                     </TableCell>
@@ -274,6 +322,29 @@ export function AdminUserJournal({ userId, username }: { userId: string; usernam
             submitLabel="Save changes"
             onSubmit={(input) => editing && updateMutation.mutate({ id: editing.id, input })}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selected.size} selected trade{selected.size === 1 ? "" : "s"} from {username}&apos;s journal?</DialogTitle>
+            <DialogDescription>
+              This cannot be undone and the owner will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setBulkConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate([...selected])}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

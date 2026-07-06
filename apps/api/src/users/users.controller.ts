@@ -14,6 +14,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { BulkStatusDto, BulkUserIdsDto } from './dto/bulk.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -45,6 +46,16 @@ export class UsersController {
   @Post()
   create(@Body() dto: CreateUserDto, @CurrentUser() actor: UserDocument) {
     return this.usersService.create(dto, actor);
+  }
+
+  @Post('bulk/status')
+  bulkStatus(@Body() dto: BulkStatusDto, @CurrentUser() actor: UserDocument) {
+    return this.usersService.bulkSetStatus(dto.ids, dto.status, actor);
+  }
+
+  @Post('bulk/delete')
+  bulkDelete(@Body() dto: BulkUserIdsDto, @CurrentUser() actor: UserDocument) {
+    return this.usersService.bulkRemove(dto.ids, actor);
   }
 
   @Patch(':id')

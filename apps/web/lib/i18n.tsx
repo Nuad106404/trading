@@ -62,6 +62,15 @@ const MESSAGES: Record<string, { en: string; th: string }> = {
   },
   "common.failedToLoad": { en: "Failed to load.", th: "โหลดข้อมูลไม่สำเร็จ" },
 
+  // bulk operations
+  "bulk.selected": { en: "selected", th: "รายการที่เลือก" },
+  "bulk.clear": { en: "Clear", th: "ล้างที่เลือก" },
+  "bulk.deleteTitle": { en: "Delete selected entries?", th: "ลบรายการที่เลือกทั้งหมด?" },
+  "bulk.deleteDesc": {
+    en: "The selected entries will be permanently removed — this cannot be undone.",
+    th: "รายการที่เลือกจะถูกลบถาวร ไม่สามารถย้อนกลับได้",
+  },
+
   // trading dashboard
   "trading.title1": { en: "Trading", th: "บันทึก" },
   "trading.title2": { en: "Journal", th: "การเทรด" },

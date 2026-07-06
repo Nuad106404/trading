@@ -55,6 +55,17 @@ export class CashService {
     return { deleted: true };
   }
 
+  /** Owner-scoped bulk delete — foreign ids simply don't match and are ignored. */
+  async bulkRemove(userId: string, ids: string[]): Promise<{ deleted: number }> {
+    const result = await this.cashModel
+      .deleteMany({
+        _id: { $in: ids.map((id) => new Types.ObjectId(id)) },
+        userId: new Types.ObjectId(userId),
+      })
+      .exec();
+    return { deleted: result.deletedCount ?? 0 };
+  }
+
   private async findOne(userId: string, id: string): Promise<CashTransactionDocument> {
     if (!isValidObjectId(id)) throw new NotFoundException('Transaction not found.');
     const tx = await this.cashModel

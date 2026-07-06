@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowUpFromLine, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { BulkBar, RowCheckbox } from "@/components/bulk-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,8 @@ export default function CashPage() {
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
   const [deleting, setDeleting] = useState<CashTransaction | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const cashQuery = useQuery({
     queryKey: ["trading", "cash"],
@@ -75,6 +78,26 @@ export default function CashPage() {
     onError: (err) =>
       toast.error(err instanceof Error ? err.message : "Failed to delete transaction."),
   });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      api<{ deleted: number }>("/trading/cash/bulk-delete", { method: "POST", body: { ids } }),
+    onSuccess: (result) => {
+      toast.success(`${result.deleted} transaction${result.deleted === 1 ? "" : "s"} deleted.`);
+      setSelected(new Set());
+      setBulkConfirm(false);
+      void invalidate();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete."),
+  });
+
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -200,7 +223,13 @@ export default function CashPage() {
       </Card>
 
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="flex flex-col gap-3 p-4">
+          <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
+            <Button variant="destructive" size="sm" onClick={() => setBulkConfirm(true)}>
+              <Trash2 className="h-4 w-4" />
+              {t("common.delete")}
+            </Button>
+          </BulkBar>
           {cashQuery.isPending ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("chrome.loading")}</p>
           ) : transactions.length === 0 ? (
@@ -211,6 +240,19 @@ export default function CashPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <RowCheckbox
+                      checked={transactions.length > 0 && transactions.every((tx) => selected.has(tx.id))}
+                      onChange={() =>
+                        setSelected(
+                          transactions.every((tx) => selected.has(tx.id))
+                            ? new Set()
+                            : new Set(transactions.map((tx) => tx.id)),
+                        )
+                      }
+                      label="Select all"
+                    />
+                  </TableHead>
                   <TableHead>{t("common.type")}</TableHead>
                   <TableHead>{t("common.amount")}</TableHead>
                   <TableHead>{t("common.date")}</TableHead>
@@ -222,6 +264,9 @@ export default function CashPage() {
               <TableBody>
                 {transactions.map((tx) => (
                   <TableRow key={tx.id}>
+                    <TableCell>
+                      <RowCheckbox checked={selected.has(tx.id)} onChange={() => toggleRow(tx.id)} />
+                    </TableCell>
                     <TableCell>
                       <Badge variant={tx.type === "deposit" ? "success" : "destructive"} className="gap-1">
                         {tx.type === "deposit" ? (
@@ -263,6 +308,29 @@ export default function CashPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("bulk.deleteTitle")}</DialogTitle>
+            <DialogDescription>
+              {selected.size} — {t("bulk.deleteDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setBulkConfirm(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate([...selected])}
+            >
+              {bulkDeleteMutation.isPending ? t("common.deleting") : t("common.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent>

@@ -98,10 +98,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data?.json() ?? {};
   } catch {
-    data = { title: "User Management", body: event.data?.text() ?? "" };
+    data = { title: "Trade Journal", body: event.data?.text() ?? "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title ?? "User Management", {
+    self.registration.showNotification(data.title ?? "Trade Journal", {
       body: data.body ?? "",
       icon: data.icon ?? "/icons/icon-192.png",
       badge: "/icons/icon-192.png",

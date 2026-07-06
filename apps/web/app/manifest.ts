@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "User Management",
-    short_name: "UserMgmt",
-    description: "User management platform",
+    name: "Trade Journal",
+    short_name: "Trade Journal",
+    description: "Trade Journal platform",
     start_url: "/",
     scope: "/",
     display: "standalone",

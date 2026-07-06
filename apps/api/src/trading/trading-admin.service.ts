@@ -22,7 +22,7 @@ import { TradesService } from './trades.service';
 /**
  * Admin management of other users' journals. Reuses the owner-scoped
  * services (so a tradeId/userId mismatch still 404s) and adds the same
- * role rule as user management: admins may only act on user-role targets,
+ * role rule as Trade Journal: admins may only act on user-role targets,
  * superadmin on anyone.
  */
 @Injectable()
@@ -58,6 +58,15 @@ export class TradingAdminService {
     const trade = await this.tradesService.findOne(targetUserId, tradeId);
     const result = await this.tradesService.remove(targetUserId, tradeId);
     this.notifyOwner(actor, target, `deleted a trade (${this.describe(trade)})`);
+    return result;
+  }
+
+  async bulkDeleteTrades(actor: UserDocument, targetUserId: string, ids: string[]) {
+    const target = await this.resolveTarget(actor, targetUserId);
+    const result = await this.tradesService.bulkRemove(targetUserId, ids);
+    if (result.deleted > 0) {
+      this.notifyOwner(actor, target, `deleted ${result.deleted} trade(s)`);
+    }
     return result;
   }
 

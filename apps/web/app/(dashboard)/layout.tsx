@@ -68,7 +68,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
             <ShieldCheck className="h-4 w-4 text-primary" />
           </span>
-          UserMgmt
+          Trade Journal
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {navItems.map(({ href, label, icon: Icon, exact }) => {
@@ -103,7 +103,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         >
           <div className="flex items-center gap-2 sm:hidden">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <span className="font-semibold">UserMgmt</span>
+            <span className="font-semibold">Trade Journal</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <InstallPrompt />

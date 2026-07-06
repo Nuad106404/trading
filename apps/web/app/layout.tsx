@@ -5,15 +5,15 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "User Management",
-    template: "%s · User Management",
+    default: "Trade Journal",
+    template: "%s · Trade Journal",
   },
-  description: "User management platform",
+  description: "Trade Journal platform",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "UserMgmt",
+    title: "Trade Journal",
   },
   icons: {
     // SVG favicon first (crisp at any size), PNG fallback for older browsers

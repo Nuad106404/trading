@@ -174,7 +174,12 @@ export class UsersService {
     return target;
   }
 
-  async setStatus(id: string, status: UserStatus, actor: UserDocument): Promise<UserDocument> {
+  async setStatus(
+    id: string,
+    status: UserStatus,
+    actor: UserDocument,
+    quiet = false,
+  ): Promise<UserDocument> {
     const target = await this.findById(id);
 
     this.ensureNotProtected(target);
@@ -187,11 +192,11 @@ export class UsersService {
     target.status = status;
     await target.save();
 
-    this.emitStatusNotifications(target, actor);
+    this.emitStatusNotifications(target, actor, quiet);
     return target;
   }
 
-  async remove(id: string, actor: UserDocument): Promise<{ deleted: true }> {
+  async remove(id: string, actor: UserDocument, quiet = false): Promise<{ deleted: true }> {
     const target = await this.findById(id);
 
     this.ensureNotProtected(target);
@@ -202,11 +207,60 @@ export class UsersService {
 
     await this.userModel.deleteOne({ _id: target._id }).exec();
 
-    this.notifyAdmins(
-      'User deleted',
-      `${actor.username} deleted account "${target.username}" (${target.role}).`,
-    );
+    if (!quiet) {
+      this.notifyAdmins(
+        'User deleted',
+        `${actor.username} deleted account "${target.username}" (${target.role}).`,
+      );
+    }
     return { deleted: true };
+  }
+
+  /**
+   * Bulk variants apply the exact same per-target rules (protected accounts,
+   * self, admin-touching-admin) — failures are reported per id, and the
+   * audit push to admins is sent once for the whole batch instead of
+   * per account.
+   */
+  async bulkSetStatus(ids: string[], status: UserStatus, actor: UserDocument) {
+    const skipped: { id: string; reason: string }[] = [];
+    let updated = 0;
+    for (const id of ids) {
+      try {
+        await this.setStatus(id, status, actor, true);
+        updated++;
+      } catch (err) {
+        skipped.push({ id, reason: err instanceof Error ? err.message : 'Failed' });
+      }
+    }
+    if (updated > 0) {
+      const verb = status === UserStatus.SUSPENDED ? 'suspended' : 'activated';
+      this.notifyAdmins(
+        `Users ${verb}`,
+        `${actor.username} ${verb} ${updated} account${updated === 1 ? '' : 's'}.`,
+      );
+    }
+    return { updated, skipped };
+  }
+
+  async bulkRemove(ids: string[], actor: UserDocument) {
+    const skipped: { id: string; reason: string }[] = [];
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        await this.remove(id, actor, true);
+        deleted++;
+      } catch (err) {
+        skipped.push({ id, reason: err instanceof Error ? err.message : 'Failed' });
+      }
+    }
+    if (deleted > 0) {
+      this.notifyAdmins(
+        'Users deleted',
+        `${actor.username} deleted ${deleted} account${deleted === 1 ? '' : 's'}.`,
+      );
+    }
+    return { deleted, skipped };
   }
 
   async resetPassword(id: string, newPassword: string, actor: UserDocument): Promise<{ success: true }> {
@@ -275,12 +329,15 @@ export class UsersService {
     return bcrypt.hash(password, this.config.get<number>('bcryptRounds', 12));
   }
 
-  private emitStatusNotifications(target: UserDocument, actor: UserDocument): void {
+  private emitStatusNotifications(target: UserDocument, actor: UserDocument, quiet = false): void {
     const suspended = target.status === UserStatus.SUSPENDED;
-    this.notifyAdmins(
-      suspended ? 'User suspended' : 'User activated',
-      `${actor.username} ${suspended ? 'suspended' : 'activated'} account "${target.username}".`,
-    );
+    if (!quiet) {
+      this.notifyAdmins(
+        suspended ? 'User suspended' : 'User activated',
+        `${actor.username} ${suspended ? 'suspended' : 'activated'} account "${target.username}".`,
+      );
+    }
+    // the affected user always gets told, even in bulk operations
     if (suspended) {
       this.pushService
         .sendToUser(target._id.toString(), {

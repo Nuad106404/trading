@@ -12,7 +12,13 @@ import {
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UserDocument } from '../users/schemas/user.schema';
-import { BulkImportDto, CreateTradeDto, QueryTradesDto, UpdateTradeDto } from './dto/trade.dto';
+import {
+  BulkIdsDto,
+  BulkImportDto,
+  CreateTradeDto,
+  QueryTradesDto,
+  UpdateTradeDto,
+} from './dto/trade.dto';
 import { TradesService } from './trades.service';
 
 @Controller('trading/trades')
@@ -33,6 +39,11 @@ export class TradesController {
   @Post('bulk-import')
   bulkImport(@CurrentUser() user: UserDocument, @Body() dto: BulkImportDto) {
     return this.tradesService.bulkImport(user._id.toString(), dto);
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(@CurrentUser() user: UserDocument, @Body() dto: BulkIdsDto) {
+    return this.tradesService.bulkRemove(user._id.toString(), dto.ids);
   }
 
   @Get(':id')

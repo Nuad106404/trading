@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
           <ShieldCheck className="h-5 w-5 text-primary" />
         </span>
-        User Management
+        Trade Journal
       </div>
       <div className="w-full max-w-sm">{children}</div>
     </main>

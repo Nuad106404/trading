@@ -1,11 +1,13 @@
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsDateString,
   IsEnum,
   IsIn,
   IsInt,
+  IsMongoId,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -254,6 +256,14 @@ export class QueryCashDto {
   @IsOptional()
   @IsDateString()
   to?: string;
+}
+
+export class BulkIdsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(2000)
+  @IsMongoId({ each: true })
+  ids: string[];
 }
 
 export class BulkImportDto {

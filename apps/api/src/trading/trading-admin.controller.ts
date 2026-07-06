@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { UserDocument } from '../users/schemas/user.schema';
 import {
+  BulkIdsDto,
   QueryCashDto,
   QueryTradesDto,
   UpdateCashDto,
@@ -54,6 +56,15 @@ export class TradingAdminController {
     @Param('tradeId') tradeId: string,
   ) {
     return this.adminService.deleteTrade(actor, userId, tradeId);
+  }
+
+  @Post('trades/bulk-delete')
+  bulkDeleteTrades(
+    @CurrentUser() actor: UserDocument,
+    @Param('userId') userId: string,
+    @Body() dto: BulkIdsDto,
+  ) {
+    return this.adminService.bulkDeleteTrades(actor, userId, dto.ids);
   }
 
   @Get('cash')

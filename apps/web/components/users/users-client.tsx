@@ -15,11 +15,20 @@ import {
   WifiOff,
   Pause,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BulkBar, RowCheckbox } from "@/components/bulk-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -84,6 +93,8 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
   const [editing, setEditing] = useState<User | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({
@@ -102,6 +113,8 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
     queryKey: ["users", queryString],
     queryFn: () => api<Paginated<User>>(`/users?${queryString}`),
   });
+
+  useEffect(() => setSelected(new Set()), [queryString]);
 
   const statsQuery = useQuery({
     queryKey: ["users", "stats"],
@@ -181,6 +194,49 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
     onError: (err) => mutationErrorToast(err, "Failed to reset password."),
   });
 
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ ids, next }: { ids: string[]; next: "active" | "suspended" }) =>
+      api<{ updated: number; skipped: { id: string; reason: string }[] }>("/users/bulk/status", {
+        method: "POST",
+        body: { ids, status: next },
+      }),
+    onSuccess: (result) => {
+      toast.success(
+        `${result.updated} user${result.updated === 1 ? "" : "s"} updated.` +
+          (result.skipped.length > 0 ? ` ${result.skipped.length} skipped.` : ""),
+      );
+      setSelected(new Set());
+      void invalidate();
+    },
+    onError: (err) => mutationErrorToast(err, "Bulk status change failed."),
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      api<{ deleted: number; skipped: { id: string; reason: string }[] }>("/users/bulk/delete", {
+        method: "POST",
+        body: { ids },
+      }),
+    onSuccess: (result) => {
+      toast.success(
+        `${result.deleted} user${result.deleted === 1 ? "" : "s"} deleted.` +
+          (result.skipped.length > 0 ? ` ${result.skipped.length} skipped.` : ""),
+      );
+      setSelected(new Set());
+      setBulkConfirm(false);
+      void invalidate();
+    },
+    onError: (err) => mutationErrorToast(err, "Bulk delete failed."),
+  });
+
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const toggleSort = (key: string) => {
     if (sortBy === key) {
       setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
@@ -195,7 +251,13 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
   const canManage = (target: User) =>
     !target.isProtected && (isSuperadmin || target.role === "user");
 
+  /** rows eligible for bulk actions: manageable and not yourself */
+  const canBulk = (target: User) => canManage(target) && target.id !== currentUser.id;
+
   const result = usersQuery.data;
+  const bulkEligible = result?.data.filter(canBulk) ?? [];
+  const allEligibleSelected =
+    bulkEligible.length > 0 && bulkEligible.every((u) => selected.has(u.id));
   const totalPages = result ? Math.max(1, Math.ceil(result.total / result.limit)) : 1;
   const isOffline = usersQuery.isError && typeof navigator !== "undefined" && !navigator.onLine;
 
@@ -268,6 +330,31 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
             </Button>
           </form>
 
+          <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulkStatusMutation.isPending}
+              onClick={() => bulkStatusMutation.mutate({ ids: [...selected], next: "active" })}
+            >
+              <Play className="h-4 w-4" />
+              Activate
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulkStatusMutation.isPending}
+              onClick={() => bulkStatusMutation.mutate({ ids: [...selected], next: "suspended" })}
+            >
+              <Pause className="h-4 w-4" />
+              Suspend
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setBulkConfirm(true)}>
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </BulkBar>
+
           {isOffline ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
               <WifiOff className="h-8 w-8" />
@@ -289,6 +376,18 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <RowCheckbox
+                      checked={allEligibleSelected}
+                      onChange={() =>
+                        setSelected(
+                          allEligibleSelected ? new Set() : new Set(bulkEligible.map((u) => u.id)),
+                        )
+                      }
+                      disabled={bulkEligible.length === 0}
+                      label="Select all"
+                    />
+                  </TableHead>
                   {SORTABLE.map(({ key, label }) => (
                     <TableHead key={key}>
                       <button
@@ -315,6 +414,13 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
               <TableBody>
                 {result?.data.map((u) => (
                   <TableRow key={u.id}>
+                    <TableCell>
+                      <RowCheckbox
+                        checked={selected.has(u.id)}
+                        onChange={() => toggleRow(u.id)}
+                        disabled={!canBulk(u)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <span className="inline-flex items-center gap-2">
                         {u.username}
@@ -449,6 +555,29 @@ export function UsersClient({ currentUser }: { currentUser: User }) {
           else createMutation.mutate(values);
         }}
       />
+
+      <Dialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selected.size} selected user{selected.size === 1 ? "" : "s"}?</DialogTitle>
+            <DialogDescription>
+              The selected accounts will be permanently removed — this cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setBulkConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate([...selected])}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDeleteDialog
         user={deleting}

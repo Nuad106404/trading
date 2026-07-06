@@ -1,6 +1,6 @@
-# User Management Platform
+# Trade Journal Platform
 
-Full-stack user management monorepo:
+Full-stack Trade Journal monorepo:
 
 - **Frontend** — Next.js 15 (App Router, TypeScript, Tailwind CSS, shadcn-style UI, TanStack Query), installable **PWA** via Serwist with **Web Push** notifications and **Background Sync**.
 - **Backend** — NestJS 11 (Mongoose, Passport-JWT, bcrypt, class-validator, web-push).

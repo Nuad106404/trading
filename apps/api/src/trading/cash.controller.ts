@@ -13,7 +13,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UserDocument } from '../users/schemas/user.schema';
 import { CashService } from './cash.service';
-import { CreateCashDto, QueryCashDto, UpdateCashDto } from './dto/trade.dto';
+import { BulkIdsDto, CreateCashDto, QueryCashDto, UpdateCashDto } from './dto/trade.dto';
 
 @Controller('trading/cash')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +28,11 @@ export class CashController {
   @Post()
   create(@CurrentUser() user: UserDocument, @Body() dto: CreateCashDto) {
     return this.cashService.create(user._id.toString(), dto);
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(@CurrentUser() user: UserDocument, @Body() dto: BulkIdsDto) {
+    return this.cashService.bulkRemove(user._id.toString(), dto.ids);
   }
 
   @Patch(':id')

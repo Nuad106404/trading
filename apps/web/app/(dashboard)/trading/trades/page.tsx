@@ -11,8 +11,9 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BulkBar, RowCheckbox } from "@/components/bulk-bar";
 import { TradeForm } from "@/components/trading/trade-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,8 @@ export default function TradesPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [editing, setEditing] = useState<Trade | null>(null);
   const [deleting, setDeleting] = useState<Trade | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({
@@ -93,6 +96,9 @@ export default function TradesPage() {
     queryKey: ["trading", "trades", queryString],
     queryFn: () => api<Paginated<Trade>>(`/trading/trades?${queryString}`),
   });
+
+  // selection doesn't survive filter/page changes — avoids deleting unseen rows
+  useEffect(() => setSelected(new Set()), [queryString]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["trading"] });
 
@@ -125,6 +131,31 @@ export default function TradesPage() {
     },
     onError: (err) => offlineAwareError(err, "Failed to delete trade."),
   });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      api<{ deleted: number }>("/trading/trades/bulk-delete", { method: "POST", body: { ids } }),
+    onSuccess: (result) => {
+      toast.success(`${result.deleted} trade${result.deleted === 1 ? "" : "s"} deleted.`);
+      setSelected(new Set());
+      setBulkConfirm(false);
+      void invalidate();
+    },
+    onError: (err) => offlineAwareError(err, "Failed to delete trades."),
+  });
+
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const pageIds = tradesQuery.data?.data.map((trade) => trade.id) ?? [];
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const toggleAll = () =>
+    setSelected(allPageSelected ? new Set() : new Set(pageIds));
 
   const toggleSort = (key: string) => {
     if (sortBy === key) setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
@@ -226,6 +257,13 @@ export default function TradesPage() {
             </Button>
           </form>
 
+          <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
+            <Button variant="destructive" size="sm" onClick={() => setBulkConfirm(true)}>
+              <Trash2 className="h-4 w-4" />
+              {t("common.delete")}
+            </Button>
+          </BulkBar>
+
           {tradesQuery.isPending ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               {t("trades.loading")}
@@ -244,6 +282,9 @@ export default function TradesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <RowCheckbox checked={allPageSelected} onChange={toggleAll} label="Select all" />
+                  </TableHead>
                   {SORTABLE.map(({ key, labelKey }) => (
                     <TableHead key={key}>
                       <button
@@ -272,6 +313,12 @@ export default function TradesPage() {
               <TableBody>
                 {data?.data.map((trade) => (
                   <TableRow key={trade.id}>
+                    <TableCell>
+                      <RowCheckbox
+                        checked={selected.has(trade.id)}
+                        onChange={() => toggleRow(trade.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono font-semibold text-amber-400">
                       {trade.symbol}
                     </TableCell>
@@ -369,6 +416,29 @@ export default function TradesPage() {
             submitLabel={t("common.save")}
             onSubmit={(input) => editing && updateMutation.mutate({ id: editing.id, input })}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("bulk.deleteTitle")}</DialogTitle>
+            <DialogDescription>
+              {selected.size} {t("trades.count")} — {t("bulk.deleteDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setBulkConfirm(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate([...selected])}
+            >
+              {bulkDeleteMutation.isPending ? t("common.deleting") : t("common.delete")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -10,7 +10,7 @@ export default function OfflinePage() {
       </div>
       <h1 className="text-2xl font-semibold">You&apos;re offline</h1>
       <p className="max-w-sm text-sm text-muted-foreground">
-        User Management needs a connection to load this page. Check your network and try again —
+        Trade Journal needs a connection to load this page. Check your network and try again —
         any changes you made will sync automatically when you&apos;re back online.
       </p>
     </main>
