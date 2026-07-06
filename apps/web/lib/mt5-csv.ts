@@ -10,6 +10,7 @@ export interface ParsedCsv {
 /** Case-insensitive header candidates for MT5 exports (and our template). */
 const HEADER_CANDIDATES: Record<string, string[]> = {
   symbol: ["symbol"],
+  ticket: ["position", "ticket", "order", "deal"],
   type: ["type", "side", "direction"],
   volume: ["volume", "lots", "lot", "size"],
   openPrice: ["openprice", "open price", "priceopen", "price open"],
@@ -127,6 +128,7 @@ export function parseMt5Csv(csvText: string): ParsedCsv {
 
     trades.push({
       symbol,
+      ticket: get(row, "ticket") || undefined,
       side,
       lots: num(get(row, "volume")) ?? 0,
       openPrice: num(get(row, "openPrice")),

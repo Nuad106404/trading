@@ -25,6 +25,12 @@ export class CreateTradeDto {
   @MaxLength(20)
   symbol: string;
 
+  @Transform(({ value }) => (typeof value === 'number' ? String(value) : value))
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  ticket?: string;
+
   @IsEnum(TradeSide)
   side: TradeSide;
 

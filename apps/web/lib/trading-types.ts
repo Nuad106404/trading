@@ -6,6 +6,7 @@ export interface Trade {
   id: string;
   userId: string;
   symbol: string;
+  ticket?: string;
   side: TradeSide;
   lots: number;
   openPrice?: number;
@@ -27,6 +28,7 @@ export interface Trade {
 
 export interface TradeInput {
   symbol: string;
+  ticket?: string;
   side: TradeSide;
   lots: number;
   openPrice?: number;

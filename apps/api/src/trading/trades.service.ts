@@ -108,41 +108,99 @@ export class TradesService {
   }
 
   /**
-   * CSV import: the client parses MT5 CSV into JSON; we only trust the JWT
-   * for ownership and force source='import' on every row.
+   * File import: the client parses MT5 exports into JSON; we only trust the
+   * JWT for ownership and force source='import' on every row.
+   *
+   * Duplicate protection: rows that match an existing entry (same broker
+   * ticket, or same symbol/side/lots/close-time/profit) are skipped, so
+   * re-uploading the same or an overlapping export never doubles the data.
    */
   async bulkImport(userId: string, dto: BulkImportDto) {
     const owner = new Types.ObjectId(userId);
 
-    const trades =
-      dto.trades.length > 0
-        ? await this.tradeModel.insertMany(
-            dto.trades.map((t) => ({
-              ...this.toTradeData(t),
-              userId: owner,
-              source: TradingSource.IMPORT,
-            })),
-          )
-        : [];
+    // existing keys for this user (both ticket-based and composite)
+    const existingTrades = await this.tradeModel
+      .find({ userId: owner })
+      .select('ticket symbol side lots closeTime profit')
+      .lean()
+      .exec();
+    const seenTradeKeys = new Set<string>(existingTrades.flatMap((t) => this.tradeKeys(t)));
 
-    const transactions =
-      dto.transactions.length > 0
-        ? await this.cashModel.insertMany(
-            dto.transactions.map((c) => ({
-              type: c.type,
-              amount: c.amount,
-              date: new Date(c.date),
-              note: c.note,
-              userId: owner,
-              source: TradingSource.IMPORT,
-            })),
-          )
-        : [];
+    const existingCash = await this.cashModel
+      .find({ userId: owner })
+      .select('type amount date')
+      .lean()
+      .exec();
+    const seenCashKeys = new Set<string>(existingCash.map((c) => this.cashKey(c)));
 
-    return { importedTrades: trades.length, importedTransactions: transactions.length };
+    const newTrades: Record<string, any>[] = [];
+    let skippedTrades = 0;
+    for (const input of dto.trades) {
+      const data = this.toTradeData(input);
+      const keys = this.tradeKeys(data);
+      if (keys.some((key) => seenTradeKeys.has(key))) {
+        skippedTrades++;
+        continue;
+      }
+      keys.forEach((key) => seenTradeKeys.add(key)); // in-batch dedup too
+      newTrades.push({ ...data, userId: owner, source: TradingSource.IMPORT });
+    }
+
+    const newCash: Record<string, any>[] = [];
+    let skippedTransactions = 0;
+    for (const input of dto.transactions) {
+      const data = {
+        type: input.type,
+        amount: input.amount,
+        date: new Date(input.date),
+        note: input.note,
+      };
+      const key = this.cashKey(data);
+      if (seenCashKeys.has(key)) {
+        skippedTransactions++;
+        continue;
+      }
+      seenCashKeys.add(key);
+      newCash.push({ ...data, userId: owner, source: TradingSource.IMPORT });
+    }
+
+    const trades = newTrades.length > 0 ? await this.tradeModel.insertMany(newTrades) : [];
+    const transactions = newCash.length > 0 ? await this.cashModel.insertMany(newCash) : [];
+
+    return {
+      importedTrades: trades.length,
+      importedTransactions: transactions.length,
+      skippedTrades,
+      skippedTransactions,
+    };
   }
 
   // ---------------------------------------------------------------- helpers
+
+  /**
+   * Identity keys for import dedup. Time is floored to the second because
+   * different MT5 exports carry different precision (report: seconds,
+   * mobile journal: milliseconds). The composite key also matches rows that
+   * were imported before tickets existed.
+   */
+  private tradeKeys(t: {
+    ticket?: string | null;
+    symbol: string;
+    side: string;
+    lots: number;
+    closeTime?: Date | null;
+    profit?: number | null;
+  }): string[] {
+    const closeSec = t.closeTime ? Math.floor(new Date(t.closeTime).getTime() / 1000) : '';
+    const profit = Math.round((t.profit ?? 0) * 100) / 100;
+    const keys = [`c|${t.symbol}|${t.side}|${t.lots}|${closeSec}|${profit}`];
+    if (t.ticket) keys.unshift(`t|${t.ticket}|${closeSec}`);
+    return keys;
+  }
+
+  private cashKey(c: { type: string; amount: number; date: Date }): string {
+    return `${c.type}|${c.amount}|${Math.floor(new Date(c.date).getTime() / 1000)}`;
+  }
 
   /** Normalizes a DTO into schema fields, deriving gross profit when absent. */
   private toTradeData(src: CreateTradeDto) {
@@ -154,10 +212,12 @@ export class TradesService {
       src.lots != null &&
       src.side
     ) {
-      profit = computeGrossProfit(src.side, src.openPrice, src.closePrice, src.lots);
+      // round to cents — float noise here would leak into stats and dedup keys
+      profit = Math.round(computeGrossProfit(src.side, src.openPrice, src.closePrice, src.lots) * 100) / 100;
     }
     return {
       symbol: src.symbol,
+      ticket: src.ticket,
       side: src.side,
       lots: src.lots,
       openPrice: src.openPrice,

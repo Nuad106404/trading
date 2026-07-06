@@ -120,6 +120,7 @@ export function parseMt5ReportRows(rows: Row[]): ParsedCsv {
       }
       trades.push({
         symbol,
+        ticket: cellStr(cell(row, "position")) || undefined,
         side,
         lots: num(cell(row, "volume")) ?? 0,
         openPrice: num(cell(row, "price", 0)),

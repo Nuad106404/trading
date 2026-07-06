@@ -170,8 +170,8 @@ const MESSAGES: Record<string, { en: string; th: string }> = {
   "import.title2": { en: "MT5", th: "MT5" },
   "import.csvTemplate": { en: "CSV template", th: "เทมเพลต CSV" },
   "import.dropHere": {
-    en: "Drop your MT5 report here (.xlsx or .csv)",
-    th: "วางไฟล์รายงาน MT5 ที่นี่ (.xlsx หรือ .csv)",
+    en: "Drop your MT5 file here (.xlsx report, .txt mobile journal, or .csv)",
+    th: "วางไฟล์ MT5 ที่นี่ (รายงาน .xlsx, Journal มือถือ .txt หรือ .csv)",
   },
   "import.browse": { en: "or click to browse files", th: "หรือคลิกเพื่อเลือกไฟล์" },
   "import.preview": { en: "Preview", th: "ตัวอย่าง" },

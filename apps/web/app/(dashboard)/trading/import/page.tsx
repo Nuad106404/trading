@@ -19,6 +19,7 @@ import {
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { downloadCsvTemplate, parseMt5Csv, type ParsedCsv } from "@/lib/mt5-csv";
+import { parseMt5Journal } from "@/lib/mt5-journal";
 import { parseMt5ReportXlsx } from "@/lib/mt5-report";
 import { fmtSignedMoney, pnlClass } from "@/lib/trading";
 import { cn } from "@/lib/utils";
@@ -52,12 +53,16 @@ export default function ImportPage() {
           .catch(() => toast.error("Could not parse this .xlsx file."));
         return;
       }
-      if (!name.endsWith(".csv")) {
-        toast.error("Please choose a .xlsx (MT5 report) or .csv file.");
+      if (!name.endsWith(".csv") && !name.endsWith(".txt") && !name.endsWith(".log")) {
+        toast.error("Please choose a .xlsx (MT5 report), .txt (mobile journal) or .csv file.");
         return;
       }
+      const isJournal = name.endsWith(".txt") || name.endsWith(".log");
       const reader = new FileReader();
-      reader.onload = () => applyResult(parseMt5Csv(String(reader.result ?? "")), file.name);
+      reader.onload = () => {
+        const content = String(reader.result ?? "");
+        applyResult(isJournal ? parseMt5Journal(content) : parseMt5Csv(content), file.name);
+      };
       reader.onerror = () => toast.error("Could not read the file.");
       reader.readAsText(file);
     },
@@ -76,16 +81,20 @@ export default function ImportPage() {
 
   const importMutation = useMutation({
     mutationFn: (payload: ParsedCsv) =>
-      api<{ importedTrades: number; importedTransactions: number }>(
-        "/trading/trades/bulk-import",
-        {
-          method: "POST",
-          body: { trades: payload.trades, transactions: payload.transactions },
-        },
-      ),
+      api<{
+        importedTrades: number;
+        importedTransactions: number;
+        skippedTrades: number;
+        skippedTransactions: number;
+      }>("/trading/trades/bulk-import", {
+        method: "POST",
+        body: { trades: payload.trades, transactions: payload.transactions },
+      }),
     onSuccess: (result) => {
+      const skipped = result.skippedTrades + result.skippedTransactions;
       toast.success(
-        `Imported ${result.importedTrades} trades and ${result.importedTransactions} cash transactions.`,
+        `Imported ${result.importedTrades} trades and ${result.importedTransactions} cash transactions.` +
+          (skipped > 0 ? ` ${skipped} duplicate entr${skipped === 1 ? "y" : "ies"} skipped.` : ""),
       );
       void queryClient.invalidateQueries({ queryKey: ["trading"] });
       router.push("/trading");
@@ -142,7 +151,7 @@ export default function ImportPage() {
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          accept=".csv,.xlsx,.txt,.log,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -264,9 +273,18 @@ export default function ImportPage() {
               rows in the Deals section (deposits/withdrawals) become cash transactions.
             </p>
             <p className="mt-1">
+              <span className="font-medium text-foreground">Mobile journal (.txt):</span> in the MT5
+              phone app open Journal → share/export the log. Positions opened and closed within the
+              log become trades (profit derived from prices — the journal carries no P&L figures).
+            </p>
+            <p className="mt-1">
               <span className="font-medium text-foreground">CSV:</span> columns matched
               case-insensitively (Symbol, Type, Volume, OpenPrice, ClosePrice, Commission, Swap,
               Profit, OpenTime, CloseTime, Comment) — see the template above.
+            </p>
+            <p className="mt-1">
+              Duplicates are detected automatically (broker ticket or identical
+              symbol/side/lots/close-time) — re-uploading the same file never doubles your data.
             </p>
           </div>
         </CardContent>

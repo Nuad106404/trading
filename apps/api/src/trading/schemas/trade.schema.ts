@@ -32,6 +32,10 @@ export class Trade {
   @Prop({ required: true, uppercase: true, trim: true, index: true })
   symbol: string;
 
+  // broker position/order id (MT5 "Position" column) — used for import dedup
+  @Prop({ trim: true })
+  ticket?: string;
+
   @Prop({ type: String, enum: TradeSide, required: true })
   side: TradeSide;
 
