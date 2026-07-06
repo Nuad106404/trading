@@ -203,6 +203,13 @@ export class StatsService {
     ]);
   }
 
+  /**
+   * Max drawdown of TRADING performance. Deposits/withdrawals are not
+   * trading results, so each cash event shifts the reference peak by the
+   * same amount instead of registering as a gain/loss — matching how MT5's
+   * "Balance Drawdown Maximal" behaves (a withdrawal after profits does
+   * not show up as a crash in the stats).
+   */
   async maxDrawdown(userId: string) {
     const curve = await this.equityCurve(userId);
     let peak = 0;
@@ -213,6 +220,12 @@ export class StatsService {
     let troughAt: string | null = null;
 
     for (const point of curve) {
+      if (point.type !== 'trade') {
+        // cash flow: move the peak with the balance (never below it)
+        peak = Math.max(peak + point.delta, point.balance);
+        if (peak === point.balance) peakAt = point.ts;
+        continue;
+      }
       if (point.balance > peak) {
         peak = point.balance;
         peakAt = point.ts;
