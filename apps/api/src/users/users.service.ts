@@ -275,15 +275,16 @@ export class UsersService {
     return { success: true };
   }
 
-  /** Own-password change from /profile. Blocked for the protected superadmin (env-rotation only). */
+  /**
+   * Own-password change from /profile. Allowed for every account including
+   * the protected superadmin — knowing the current password proves it's the
+   * owner. Protection still blocks everyone ELSE from touching this account,
+   * and the --force-reset seeder remains the recovery path if the password
+   * is forgotten.
+   */
   async changeOwnPassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.findByIdWithHash(userId);
     if (!user) throw new NotFoundException('User not found.');
-    if (user.isProtected) {
-      throw new ForbiddenException(
-        'The protected superadmin password can only be rotated via the re-seed script.',
-      );
-    }
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!ok) throw new BadRequestException('Current password is incorrect.');
     user.passwordHash = await this.hashPassword(newPassword);

@@ -93,12 +93,6 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>{t("profile.changePassword")}</CardTitle>
-          {user.isProtected && (
-            <CardDescription>
-              This protected account&apos;s password can only be rotated via the server re-seed
-              script.
-            </CardDescription>
-          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={changePassword} className="flex max-w-sm flex-col gap-4">
@@ -109,7 +103,6 @@ export default function ProfilePage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                disabled={user.isProtected}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
@@ -122,7 +115,6 @@ export default function ProfilePage() {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                disabled={user.isProtected}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
@@ -134,12 +126,11 @@ export default function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 required
-                disabled={user.isProtected}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
               />
             </div>
-            <Button type="submit" disabled={submitting || user.isProtected} className="self-start">
+            <Button type="submit" disabled={submitting} className="self-start">
               {submitting ? t("common.saving") : t("profile.changePassword")}
             </Button>
           </form>

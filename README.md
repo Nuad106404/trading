@@ -122,9 +122,13 @@ in `apps/api/.env` (git-ignored) and is bcrypt-hashed at seed time.
 
 Additional rules enforced in the service layer (regardless of caller):
 
-- The seeded superadmin has `isProtected: true` → **any** edit/delete/status/role/password
-  change through the API returns `403 Forbidden`. The UI hides its actions and shows a
-  **Protected** badge.
+- The seeded superadmin has `isProtected: true` → any edit/delete/status/role change or
+  admin password-reset **by anyone** returns `403 Forbidden`. The UI hides its actions and
+  shows a **Protected** badge. The one exception: the account can change **its own**
+  password from /profile (proving ownership with the current password). If the password
+  is forgotten, `./deploy.sh --reset-superadmin` (or the local `--force-reset` seeder)
+  re-hashes it from `.env` — note that after an in-app change, the value in `.env` is
+  stale until you update it.
 - Nobody can delete their own account or change their own role/status.
 - Only a superadmin can change roles; admins can only create `user` accounts.
 - Suspended accounts cannot log in; `passwordHash` is `select: false` **and** stripped in
