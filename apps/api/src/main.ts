@@ -7,6 +7,10 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // behind the nginx reverse proxy: use X-Forwarded-* for client IPs so
+  // rate limiting counts real visitors, not the proxy
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   app.use(helmet());
   app.enableCors({
     origin: process.env.WEB_ORIGIN ?? 'http://localhost:3000',
