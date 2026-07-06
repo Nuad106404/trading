@@ -267,25 +267,18 @@ export default function ImportPage() {
           <Upload className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p>
-              <span className="font-medium text-foreground">MT5 report (.xlsx):</span> in MT5 open
-              History, right-click → Report → <span className="font-mono">Open XML (Excel)</span>.
-              Closed positions are imported as trades; <span className="font-mono">balance</span>{" "}
-              rows in the Deals section (deposits/withdrawals) become cash transactions.
+              <span className="font-medium text-foreground">{t("import.help.xlsxLabel")}</span>{" "}
+              {t("import.help.xlsxBody")}
             </p>
             <p className="mt-1">
-              <span className="font-medium text-foreground">Mobile journal (.txt):</span> in the MT5
-              phone app open Journal → share/export the log. Positions opened and closed within the
-              log become trades (profit derived from prices — the journal carries no P&L figures).
+              <span className="font-medium text-foreground">{t("import.help.txtLabel")}</span>{" "}
+              {t("import.help.txtBody")}
             </p>
             <p className="mt-1">
-              <span className="font-medium text-foreground">CSV:</span> columns matched
-              case-insensitively (Symbol, Type, Volume, OpenPrice, ClosePrice, Commission, Swap,
-              Profit, OpenTime, CloseTime, Comment) — see the template above.
+              <span className="font-medium text-foreground">{t("import.help.csvLabel")}</span>{" "}
+              {t("import.help.csvBody")}
             </p>
-            <p className="mt-1">
-              Duplicates are detected automatically (broker ticket or identical
-              symbol/side/lots/close-time) — re-uploading the same file never doubles your data.
-            </p>
+            <p className="mt-1">{t("import.help.dedup")}</p>
           </div>
         </CardContent>
       </Card>

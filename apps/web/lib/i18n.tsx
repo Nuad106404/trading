@@ -190,6 +190,25 @@ const MESSAGES: Record<string, { en: string; th: string }> = {
   "import.confirm": { en: "Confirm import", th: "ยืนยันนำเข้า" },
   "import.importing": { en: "Importing…", th: "กำลังนำเข้า…" },
   "import.skipped": { en: "row(s) skipped:", th: "แถวถูกข้าม:" },
+  "import.help.xlsxLabel": { en: "MT5 report (.xlsx):", th: "รายงาน MT5 (.xlsx):" },
+  "import.help.xlsxBody": {
+    en: "in MT5 open History, right-click → Report → Open XML (Excel). Closed positions are imported as trades; balance rows in the Deals section (deposits/withdrawals) become cash transactions.",
+    th: "ใน MT5 เปิดหน้า History แล้วคลิกขวา → Report → Open XML (Excel) — ไม้ที่ปิดแล้วจะถูกนำเข้าเป็นเทรด ส่วนแถว balance ในหมวด Deals (ฝาก/ถอน) จะถูกบันทึกเป็นธุรกรรมเงินให้อัตโนมัติ",
+  },
+  "import.help.txtLabel": { en: "Mobile journal (.txt):", th: "Journal มือถือ (.txt):" },
+  "import.help.txtBody": {
+    en: "in the MT5 phone app open Journal → share/export the log. Positions opened and closed within the log become trades (profit derived from prices — the journal carries no P&L figures).",
+    th: "ในแอป MT5 บนมือถือ เปิดหน้า Journal → แชร์/ส่งออกไฟล์ log — ไม้ที่เปิดและปิดภายใน log จะถูกนำเข้าเป็นเทรด (กำไรคำนวณจากราคา เพราะไฟล์ journal ไม่มีตัวเลขกำไร/ค่าคอม/สวอป)",
+  },
+  "import.help.csvLabel": { en: "CSV:", th: "CSV:" },
+  "import.help.csvBody": {
+    en: "columns matched case-insensitively (Symbol, Type, Volume, OpenPrice, ClosePrice, Commission, Swap, Profit, OpenTime, CloseTime, Comment) — see the template above.",
+    th: "จับคู่หัวคอลัมน์โดยไม่สนตัวพิมพ์เล็ก-ใหญ่ (Symbol, Type, Volume, OpenPrice, ClosePrice, Commission, Swap, Profit, OpenTime, CloseTime, Comment) — ดาวน์โหลดเทมเพลตได้จากปุ่มด้านบน",
+  },
+  "import.help.dedup": {
+    en: "Duplicates are detected automatically (broker ticket or identical symbol/side/lots/close-time) — re-uploading the same file never doubles your data.",
+    th: "ระบบตรวจจับรายการซ้ำให้อัตโนมัติ (จากเลข ticket ของโบรกเกอร์ หรือรายการที่คู่เงิน/ฝั่ง/lots/เวลาปิดตรงกันทุกอย่าง) — อัปโหลดไฟล์เดิมซ้ำกี่ครั้ง ข้อมูลก็ไม่ถูกนับซ้ำ",
+  },
 
   // profile
   "profile.title": { en: "Profile", th: "โปรไฟล์" },
