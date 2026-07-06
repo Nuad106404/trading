@@ -219,9 +219,11 @@ Details:
 - **Install**: custom "Install app" button (`beforeinstallprompt`) in the dashboard
   header; on iOS Safari a "Share → Add to Home Screen" hint is shown instead. On iOS,
   Web Push requires the installed PWA (iOS 16.4+) — the enable button is gated accordingly.
-- **Icons**: `apps/web/public/icons/*.png` are generated placeholders. Replace them with
-  real brand icons (same filenames/sizes: 192, 512, maskable 512, apple-touch 180), or
-  tweak and re-run `node apps/web/scripts/gen-icons.mjs`.
+- **Icons**: the NUAD brand mark lives in `apps/web/public/icons/logo.svg` (gold "N"
+  with a rising arrow; `maskable.svg` and `wordmark.svg` variants alongside). The SVG is
+  used directly as the favicon; the committed PNGs (192/512/maskable/apple-touch) are
+  rendered from it — to regenerate after a logo change:
+  `npm i -D sharp && node apps/web/scripts/gen-icons.mjs && npm rm sharp` (in `apps/web`).
 
 ## Security notes
 

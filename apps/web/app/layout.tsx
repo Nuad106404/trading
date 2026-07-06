@@ -16,7 +16,11 @@ export const metadata: Metadata = {
     title: "UserMgmt",
   },
   icons: {
-    icon: "/icons/icon-192.png",
+    // SVG favicon first (crisp at any size), PNG fallback for older browsers
+    icon: [
+      { url: "/icons/logo.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: "/icons/apple-touch-icon.png",
   },
 };
